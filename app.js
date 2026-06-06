@@ -11,7 +11,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqRvkO6AYYd7Hy
 const ALLOWED_DOMAIN = "@pw.live";
 
 // 🔗 Pinned Sheets Sync — Web App URL (deploy your PinnedSync.gs on the Login sheet)
-const PIN_API_URL = "https://script.google.com/macros/s/AKfycbztvhlhHBShWRQ-Zji_WEBmyxo8S1GBhJye82HUVoCWasnFGbOKaEabv8-Ih3RLubSjlQ/exec";
+const PIN_API_URL = "https://script.google.com/macros/s/AKfycbwvMuuywsl4AM3OxP9lD0uv7XEcpiEyiYZVvWmFL_NC4pyOLp75SHYh59EGz8Shw8Z3/exec";
 
 let currentUser = localStorage.getItem("loggedUser");
 let allSheets = [];

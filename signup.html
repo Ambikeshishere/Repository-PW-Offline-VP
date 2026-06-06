@@ -27,36 +27,66 @@
       <h1 class="auth-title">Create Account</h1>
       <p class="auth-sub">Register with PW mail id</p>
 
-      <div class="input-group">
-        <label>Email</label>
-        <div class="input-wrap">
-          <span class="input-icon">✉</span>
-          <input type="email" id="email" placeholder="you@pw.live" autocomplete="email">
+      <!-- Step 1: Email + Password -->
+      <div id="step1">
+        <div class="input-group">
+          <label>Email</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉</span>
+            <input type="email" id="email" placeholder="you@pw.live" autocomplete="email">
+          </div>
         </div>
+
+        <div class="input-group">
+          <label>Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="password" placeholder="Create a password" autocomplete="new-password">
+            <button class="pwd-toggle" onclick="togglePassword('password')" type="button" aria-label="Toggle password visibility">👁</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Confirm Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="confirmPassword" placeholder="Re-enter your password" autocomplete="new-password">
+            <button class="pwd-toggle" onclick="togglePassword('confirmPassword')" type="button" aria-label="Toggle password visibility">👁</button>
+          </div>
+        </div>
+
+        <button class="btn-signin" id="sendOtpBtn" onclick="sendOtp()">
+          <span>Send OTP</span>
+          <span class="btn-arrow">→</span>
+        </button>
       </div>
 
-      <div class="input-group">
-        <label>Password</label>
-        <div class="input-wrap">
-          <span class="input-icon">🔒</span>
-          <input type="password" id="password" placeholder="Create a password" autocomplete="new-password">
-          <button class="pwd-toggle" onclick="togglePassword('password')" type="button" aria-label="Toggle password visibility">👁</button>
+      <!-- Step 2: OTP Verification (hidden initially) -->
+      <div id="step2" style="display:none;">
+        <div class="otp-info">
+          <span class="otp-email-label">OTP sent to</span>
+          <span id="otpEmailDisplay" class="otp-email-value"></span>
         </div>
-      </div>
 
-      <div class="input-group">
-        <label>Confirm Password</label>
-        <div class="input-wrap">
-          <span class="input-icon">🔒</span>
-          <input type="password" id="confirmPassword" placeholder="Re-enter your password" autocomplete="new-password">
-          <button class="pwd-toggle" onclick="togglePassword('confirmPassword')" type="button" aria-label="Toggle password visibility">👁</button>
+        <div class="input-group">
+          <label>Enter OTP</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input type="text" id="otpInput" placeholder="6-digit OTP" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+          </div>
         </div>
-      </div>
 
-      <button class="btn-signin" id="signupBtn" onclick="signUp()">
-        <span>Create Account</span>
-        <span class="btn-arrow">→</span>
-      </button>
+        <div id="otpTimer" class="otp-timer">⏱ 10:00</div>
+
+        <button class="btn-signin" id="verifyOtpBtn" onclick="verifyAndSignUp()">
+          <span>Verify & Create Account</span>
+          <span class="btn-arrow">→</span>
+        </button>
+
+        <button class="btn-resend" id="resendOtpBtn" onclick="resendOtp()" disabled>
+          Resend OTP <span id="resendTimer">(30s)</span>
+        </button>
+      </div>
 
       <p id="authMessage" class="auth-msg"></p>
 
@@ -76,14 +106,75 @@
     .strength-weak   { width: 33%; background: #ef4444; }
     .strength-medium { width: 66%; background: #f97316; }
     .strength-strong { width: 100%; background: #22c55e; }
+
+    /* OTP section styles */
+    .otp-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(34,211,238,0.08);
+      border: 1px solid rgba(34,211,238,0.2);
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .otp-email-label { color: var(--text-secondary); }
+    .otp-email-value {
+      color: var(--text-primary);
+      font-weight: 600;
+      word-break: break-all;
+    }
+    .otp-timer {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: -8px;
+      margin-bottom: 16px;
+      font-variant-numeric: tabular-nums;
+    }
+    .btn-resend {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 8px;
+    }
+    .btn-resend:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-resend:not(:disabled):hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    /* fade-in animation for step2 */
+    @keyframes otpFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    #step2 { animation: otpFadeIn 0.4s ease; }
   </style>
 
   <script>
     // ⚙️ CONFIG
     const ALLOWED_DOMAIN = "@pw.live";
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRPYm8C2KJyKOeX-NHUzQbnI50HPT8pRAMYGFBHOcgcqJzmcSj5SDZ292m805VWun51w/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwvMuuywsl4AM3OxP9lD0uv7XEcpiEyiYZVvWmFL_NC4pyOLp75SHYh59EGz8Shw8Z3/exec";
 
-    // Password show/hide toggle
+    // State
+    let currentOtp = "";
+    let otpTimerInterval = null;
+    let otpExpiry = null;        // Date when OTP expires
+    let resendCooldown = 0;      // seconds until resend allowed
+    let resendInterval = null;
+
+    // ─── TOGGLES ──────────────────────────────────────────────────
     function togglePassword(fieldId) {
       const input = document.getElementById(fieldId);
       const btn = input?.parentElement?.querySelector('.pwd-toggle');
@@ -97,7 +188,7 @@
       }
     }
 
-    // Password strength indicator
+    // ─── PASSWORD STRENGTH ────────────────────────────────────────
     const passwordInput = document.getElementById("password");
     const strengthBar = document.createElement("div");
     strengthBar.className = "password-strength";
@@ -115,55 +206,228 @@
       else { bar.classList.add("strength-strong"); }
     });
 
-    async function signUp() {
+    // ─── SHOW MESSAGE ─────────────────────────────────────────────
+    function setMessage(msg, type) {
+      const el = document.getElementById("authMessage");
+      el.innerText = msg;
+      el.className = "auth-msg" + (type ? " " + type : "");
+    }
+
+    // ─── SEND OTP ─────────────────────────────────────────────────
+    async function sendOtp() {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const confirm = document.getElementById("confirmPassword").value.trim();
-      const message = document.getElementById("authMessage");
-      const btn = document.getElementById("signupBtn");
 
-      message.innerText = "";
-      message.className = "auth-msg";
+      setMessage("");
 
-      if (!email) { message.innerText = "Please enter your email."; return; }
-      if (!email.endsWith(ALLOWED_DOMAIN)) { message.innerText = `Only ${ALLOWED_DOMAIN} emails are allowed.`; return; }
-      if (!password) { message.innerText = "Please enter a password."; return; }
-      if (password.length < 6) { message.innerText = "Password must be at least 6 characters."; return; }
-      if (password !== confirm) { message.innerText = "Passwords do not match."; return; }
+      if (!email) { setMessage("Please enter your email."); return; }
+      if (!email.endsWith(ALLOWED_DOMAIN)) { setMessage("Only " + ALLOWED_DOMAIN + " emails are allowed."); return; }
+      if (!password) { setMessage("Please enter a password."); return; }
+      if (password.length < 6) { setMessage("Password must be at least 6 characters."); return; }
+      if (password !== confirm) { setMessage("Passwords do not match."); return; }
 
-      btn.innerHTML = '<span class="btn-spinner"></span><span>Creating account...</span>';
+      const btn = document.getElementById("sendOtpBtn");
+      btn.innerHTML = '<span class="btn-spinner"></span><span>Sending OTP...</span>';
       btn.disabled = true;
 
       try {
         const res = await fetch(SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ action: "signup", email, password })
+          body: JSON.stringify({ action: "sendOtp", email })
         });
 
         const data = await res.json();
 
         if (data.success) {
-          message.className = "auth-msg success";
-          message.innerText = "✅ Account created! Redirecting to login...";
-          setTimeout(() => { window.location.href = "login.html"; }, 2000);
+          // Store email reference and show step 2
+          document.getElementById("otpEmailDisplay").innerText = email;
+          document.getElementById("step1").style.display = "none";
+          document.getElementById("step2").style.display = "block";
+          setMessage("✅ OTP sent! Check your " + email + " inbox.", "success");
+
+          // Start OTP expiry timer (10 min)
+          otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+          startOtpCountdown();
+
+          // Start resend cooldown (30s)
+          startResendCooldown();
+
+          // Focus OTP input
+          document.getElementById("otpInput").focus();
         } else {
-          message.innerText = "❌ " + (data.error || "Error creating account.");
-          btn.innerHTML = "<span>Create Account</span><span class='btn-arrow'>→</span>";
-          btn.disabled = false;
+          setMessage("❌ " + (data.error || "Failed to send OTP."));
         }
       } catch (err) {
-        message.innerText = "❌ Network error. Check console for details.";
-        console.error("Signup error:", err);
-        btn.innerHTML = "<span>Create Account</span><span class='btn-arrow'>→</span>";
+        setMessage("❌ Network error. Check console.");
+        console.error("sendOtp error:", err);
+      } finally {
+        btn.innerHTML = '<span>Send OTP</span><span class="btn-arrow">→</span>';
         btn.disabled = false;
       }
     }
 
+    // ─── RESEND OTP ───────────────────────────────────────────────
+    async function resendOtp() {
+      const email = document.getElementById("email").value.trim();
+      const btn = document.getElementById("resendOtpBtn");
+      btn.disabled = true;
+
+      setMessage("");
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "sendOtp", email })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          setMessage("✅ New OTP sent!", "success");
+          // Reset timers
+          otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+          startOtpCountdown();
+          startResendCooldown();
+          document.getElementById("otpInput").value = "";
+          document.getElementById("otpInput").focus();
+        } else {
+          setMessage("❌ " + (data.error || "Failed to resend OTP."));
+          btn.disabled = false;
+        }
+      } catch (err) {
+        setMessage("❌ Network error.");
+        console.error("resendOtp error:", err);
+        btn.disabled = false;
+      }
+    }
+
+    // ─── VERIFY OTP & SIGNUP ──────────────────────────────────────
+    async function verifyAndSignUp() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const otp = document.getElementById("otpInput").value.trim();
+      const btn = document.getElementById("verifyOtpBtn");
+      const message = document.getElementById("authMessage");
+
+      setMessage("");
+
+      if (!otp || otp.length !== 6) { setMessage("Please enter the 6-digit OTP."); return; }
+      if (!/^\d{6}$/.test(otp)) { setMessage("OTP must be 6 digits."); return; }
+
+      // Check expiry on client side
+      if (otpExpiry && Date.now() > otpExpiry.getTime()) {
+        setMessage("⏰ OTP has expired. Please resend.");
+        return;
+      }
+
+      btn.innerHTML = '<span class="btn-spinner"></span><span>Verifying...</span>';
+      btn.disabled = true;
+
+      try {
+        // Step 1: Verify OTP
+        const verifyRes = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "verifyOtp", email, otp })
+        });
+
+        const verifyData = await verifyRes.json();
+
+        if (!verifyData.success) {
+          setMessage("❌ " + (verifyData.error || "Invalid OTP."));
+          btn.innerHTML = '<span>Verify & Create Account</span><span class="btn-arrow">→</span>';
+          btn.disabled = false;
+          return;
+        }
+
+        // Step 2: Create account
+        btn.innerHTML = '<span class="btn-spinner"></span><span>Creating account...</span>';
+
+        const signupRes = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "signup", email, password, otp })
+        });
+
+        const signupData = await signupRes.json();
+
+        if (signupData.success) {
+          setMessage("✅ " + signupData.message + " Redirecting to login...", "success");
+          setTimeout(() => { window.location.href = "login.html"; }, 2000);
+        } else {
+          setMessage("❌ " + (signupData.error || "Error creating account."));
+          btn.innerHTML = '<span>Verify & Create Account</span><span class="btn-arrow">→</span>';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        setMessage("❌ Network error. Check console.");
+        console.error("verifyAndSignUp error:", err);
+        btn.innerHTML = '<span>Verify & Create Account</span><span class="btn-arrow">→</span>';
+        btn.disabled = false;
+      }
+    }
+
+    // ─── OTP COUNTDOWN (10 min) ───────────────────────────────────
+    function startOtpCountdown() {
+      if (otpTimerInterval) clearInterval(otpTimerInterval);
+      const timerEl = document.getElementById("otpTimer");
+
+      otpTimerInterval = setInterval(() => {
+        if (!otpExpiry) { timerEl.innerText = "⏱ --:--"; return; }
+
+        const remaining = Math.max(0, Math.floor((otpExpiry.getTime() - Date.now()) / 1000));
+        const min = String(Math.floor(remaining / 60)).padStart(2, "0");
+        const sec = String(remaining % 60).padStart(2, "0");
+        timerEl.innerText = "⏱ " + min + ":" + sec;
+
+        if (remaining <= 0) {
+          clearInterval(otpTimerInterval);
+          otpTimerInterval = null;
+          timerEl.innerText = "⏱ Expired";
+          timerEl.style.color = "#ef4444";
+        } else {
+          timerEl.style.color = remaining < 60 ? "#f97316" : "var(--text-secondary)";
+        }
+      }, 1000);
+    }
+
+    // ─── RESEND COOLDOWN (30s) ────────────────────────────────────
+    function startResendCooldown() {
+      if (resendInterval) clearInterval(resendInterval);
+      const btn = document.getElementById("resendOtpBtn");
+      const span = document.getElementById("resendTimer");
+
+      resendCooldown = 30;
+      btn.disabled = true;
+
+      resendInterval = setInterval(() => {
+        resendCooldown--;
+        if (resendCooldown <= 0) {
+          clearInterval(resendInterval);
+          resendInterval = null;
+          btn.disabled = false;
+          span.innerText = "";
+        } else {
+          span.innerText = "(" + resendCooldown + "s)";
+        }
+      }, 1000);
+    }
+
+    // ─── ENTER KEY HANDLING ───────────────────────────────────────
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") signUp();
+      if (e.key !== "Enter") return;
+      const step2 = document.getElementById("step2");
+      if (step2.style.display !== "none") {
+        verifyAndSignUp();
+      } else {
+        sendOtp();
+      }
     });
 
+    // ─── THEME ────────────────────────────────────────────────────
     const t = localStorage.getItem("companyTheme") || "charcoal";
     document.documentElement.setAttribute("data-theme", t);
   </script>
