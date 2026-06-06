@@ -40,6 +40,7 @@
         <div class="input-wrap">
           <span class="input-icon">🔒</span>
           <input type="password" id="password" placeholder="Create a password" autocomplete="new-password">
+          <button class="pwd-toggle" onclick="togglePassword('password')" type="button" aria-label="Toggle password visibility">👁</button>
         </div>
       </div>
 
@@ -48,6 +49,7 @@
         <div class="input-wrap">
           <span class="input-icon">🔒</span>
           <input type="password" id="confirmPassword" placeholder="Re-enter your password" autocomplete="new-password">
+          <button class="pwd-toggle" onclick="togglePassword('confirmPassword')" type="button" aria-label="Toggle password visibility">👁</button>
         </div>
       </div>
 
@@ -80,6 +82,20 @@
     // ⚙️ CONFIG
     const ALLOWED_DOMAIN = "@pw.live";
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRPYm8C2KJyKOeX-NHUzQbnI50HPT8pRAMYGFBHOcgcqJzmcSj5SDZ292m805VWun51w/exec";
+
+    // Password show/hide toggle
+    function togglePassword(fieldId) {
+      const input = document.getElementById(fieldId);
+      const btn = input?.parentElement?.querySelector('.pwd-toggle');
+      if (!input) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (btn) btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        if (btn) btn.textContent = '👁';
+      }
+    }
 
     // Password strength indicator
     const passwordInput = document.getElementById("password");
@@ -115,7 +131,7 @@
       if (password.length < 6) { message.innerText = "Password must be at least 6 characters."; return; }
       if (password !== confirm) { message.innerText = "Passwords do not match."; return; }
 
-      btn.innerHTML = "<span>Creating account...</span>";
+      btn.innerHTML = '<span class="btn-spinner"></span><span>Creating account...</span>';
       btn.disabled = true;
 
       try {

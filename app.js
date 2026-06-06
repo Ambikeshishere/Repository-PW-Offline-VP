@@ -10,13 +10,77 @@
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqRvkO6AYYd7Hy_zCIX7HCtWweznMdAKF4EVcYj50KuhzQtfxWszGNnU4BEe3tDB2uab8SvK8qGc5s/pub?output=csv";
 const ALLOWED_DOMAIN = "@pw.live";
 
+// 🔗 Pinned Sheets Sync — Web App URL (deploy your PinnedSync.gs on the Login sheet)
+const PIN_API_URL = "https://script.google.com/macros/s/AKfycbztvhlhHBShWRQ-Zji_WEBmyxo8S1GBhJye82HUVoCWasnFGbOKaEabv8-Ih3RLubSjlQ/exec";
+
 let currentUser = localStorage.getItem("loggedUser");
 let allSheets = [];
 let currentFilter = "all";
 let pendingFilter = null;
 
+// In-memory pin cache — synced with server on load
+let pinnedCache = null;
+
+// ===== ANTI-INSPECT — logout on DevTools open =====
+(function antiDevTools() {
+  function logoutNow() {
+    localStorage.removeItem("loggedUser");
+    window.location.href = "login.html";
+  }
+
+  // 1. Block keyboard shortcuts for DevTools
+  document.addEventListener("keydown", function (e) {
+    // F12
+    if (e.key === "F12"
+      // Ctrl+Shift+I / Cmd+Opt+I (Inspect)
+      || (e.ctrlKey && e.shiftKey && e.key === "I")
+      || (e.metaKey && e.altKey && e.key === "I")
+      // Ctrl+Shift+J / Cmd+Opt+J (Console)
+      || (e.ctrlKey && e.shiftKey && e.key === "J")
+      || (e.metaKey && e.altKey && e.key === "J")
+      // Ctrl+Shift+C / Cmd+Opt+C (Inspect Element)
+      || (e.ctrlKey && e.shiftKey && e.key === "C")
+      || (e.metaKey && e.altKey && e.key === "C")
+      // Ctrl+U / Cmd+U (View Source)
+      || ((e.ctrlKey || e.metaKey) && e.key === "U")
+    ) {
+      e.preventDefault();
+      logoutNow();
+      return false;
+    }
+  });
+
+  // 2. Block right-click — no context menu, no logout
+  document.addEventListener("contextmenu", function (e) {
+    e.preventDefault();
+    return false;
+  });
+
+  // 3. Periodic checker — detects DevTools via debugger trick
+  let devtoolsDetected = false;
+  function checkDevTools() {
+    if (devtoolsDetected) return;
+    const start = performance.now();
+    // debugger statement pauses execution when DevTools is open
+    debugger;
+    const elapsed = performance.now() - start;
+    // If DevTools is open, debugger pauses → elapsed will be > ~100ms
+    if (elapsed > 100) {
+      devtoolsDetected = true;
+      logoutNow();
+    }
+  }
+  // Check every 2 seconds
+  setInterval(checkDevTools, 2000);
+  // Also check immediately
+  setTimeout(checkDevTools, 500);
+})();
+
 // ===== FETCH SHEETS =====
 async function fetchSheets() {
+  // Load pinned sheets from server first (or localStorage fallback)
+  await loadPinned();
+
   // Try cache first
   const cached = loadFromCache();
   if (cached) {
@@ -175,13 +239,14 @@ function renderList(sheets) {
     const cat = detectCategory(sheet.name);
     const catBadge = cat ? `<span class="cat-badge" style="background:${cat.color}22; color:${cat.color}; border-color:${cat.color}44">${cat.icon} ${cat.label}</span>` : "";
     const borderColor = cat ? cat.color : "rgba(255,255,255,0.08)";
+    const iconBg = cat ? `${cat.color}22` : "rgba(255,255,255,0.06)";
 
     const item = document.createElement("div");
     item.className = "sheet-tile";
     item.style.borderLeftColor = borderColor;
     item.innerHTML = `
       <div class="tile-top">
-        <div class="tile-icon" style="background:${borderColor}22">${sheetsIcon(18)}</div>
+        <div class="tile-icon" style="background:${iconBg}">${sheetsIcon(18)}</div>
         <div class="tile-actions">
           <button class="open-btn" onclick="event.stopPropagation(); openSheet('${escapeAttr(sheet.webLink)}')">Open ↗</button>
           <button class="pin-btn" onclick="event.stopPropagation(); togglePin('${escapeAttr(sheet.name)}')">📌</button>
@@ -221,32 +286,77 @@ function detectCategory(name) {
   return null;
 }
 
-// ===== PINNING =====
-function getPinned() {
+// ===== PINNING — Cross-device sync via Google Sheet =====
+
+/** Load current user's pinned sheets from server (fallback → localStorage) */
+async function loadPinned() {
+  if (!currentUser) { pinnedCache = []; return; }
+
+  // Try server first
+  if (PIN_API_URL && !PIN_API_URL.startsWith("PUT_YOUR")) {
+    try {
+      const url = PIN_API_URL + "?email=" + encodeURIComponent(currentUser) + "&t=" + Date.now();
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data && Array.isArray(data.pins)) {
+        pinnedCache = data.pins;
+        console.log("📌 Pins synced from server");
+        return;
+      }
+    } catch (err) {
+      console.warn("⚠️ Pin server unreachable, using localStorage fallback");
+    }
+  }
+
+  // Fallback: read from localStorage
   try {
-    const data = JSON.parse(localStorage.getItem("pinnedSheets")) || {};
-    return data[currentUser] || [];
-  } catch { return []; }
+    const local = JSON.parse(localStorage.getItem("pinnedSheets")) || {};
+    pinnedCache = local[currentUser] || [];
+  } catch {
+    pinnedCache = [];
+  }
 }
 
-function togglePin(name) {
+/** Return cached pinned sheet names (synchronous — use after loadPinned) */
+function getPinned() {
+  return pinnedCache || [];
+}
+
+/** Sync pins to server and update UI */
+async function togglePin(name) {
+  const current = getPinned();
+  let msg;
+
+  if (current.includes(name)) {
+    pinnedCache = current.filter(s => s !== name);
+    msg = "📌 Unpinned";
+  } else {
+    pinnedCache = [...current, name];
+    msg = "📌 Pinned!";
+  }
+
+  // Always save to localStorage as backup
   try {
     const data = JSON.parse(localStorage.getItem("pinnedSheets")) || {};
-    const userPins = data[currentUser] || [];
-    let msg;
-    if (userPins.includes(name)) {
-      data[currentUser] = userPins.filter(s => s !== name);
-      msg = "📌 Unpinned";
-    } else {
-      data[currentUser] = [...userPins, name];
-      msg = "📌 Pinned!";
-    }
+    data[currentUser] = pinnedCache;
     localStorage.setItem("pinnedSheets", JSON.stringify(data));
-    showToast(msg);
-    renderSheets(allSheets);
-  } catch (err) {
-    console.error("Pin error:", err);
+  } catch {}
+
+  // Try server sync via POST (matches doPost in your Apps Script)
+  if (PIN_API_URL && !PIN_API_URL.startsWith("PUT_YOUR")) {
+    try {
+      fetch(PIN_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentUser, pins: pinnedCache })
+      }).catch(() => {});
+    } catch (err) {
+      console.warn("⚠️ Pin server sync failed");
+    }
   }
+
+  showToast(msg);
+  renderSheets(allSheets);
 }
 
 // ===== OPEN SHEET =====
@@ -371,9 +481,12 @@ function escapeAttr(str) {
   return str.replace(/'/g, "\\'").replace(/"/g, "&quot;");
 }
 function sheetsIcon(size) {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const bg = isDark ? '#2e7d32' : '#34a853';
+  const text = isDark ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.9)';
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="2" y="2" width="20" height="20" rx="3" fill="#34a853"/>
-    <path d="M6 7h12v1.5H6zM6 10h12v1.5H6zM6 13h12v1.5H6zM6 16h8v1.5H6z" fill="rgba(255,255,255,0.9)"/>
+    <rect x="2" y="2" width="20" height="20" rx="3" fill="${bg}"/>
+    <path d="M6 7h12v1.5H6zM6 10h12v1.5H6zM6 13h12v1.5H6zM6 16h8v1.5H6z" fill="${text}"/>
     <rect x="6" y="7" width="1.5" height="10.5" fill="rgba(255,255,255,0.2)"/>
     <rect x="16.5" y="7" width="1.5" height="10.5" fill="rgba(255,255,255,0.2)"/>
   </svg>`;
@@ -399,6 +512,8 @@ function setTheme(theme) {
   document.querySelectorAll('.theme-btn, .home-theme-btn, .theme-dot').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.theme === theme);
   });
+  // Re-render sheet icons with new theme colors
+  if (allSheets.length > 0) renderSheets(allSheets);
 }
 
 // Apply saved theme on load

@@ -274,7 +274,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px 14px 12px 40px;
+  padding: 12px 40px 12px 40px;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14px;
@@ -287,6 +287,23 @@ body {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 .input-wrap input::placeholder { color: var(--text-muted); }
+.input-wrap .pwd-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px;
+  color: var(--text-muted);
+  transition: color 0.2s;
+  z-index: 2;
+}
+.input-wrap .pwd-toggle:hover { color: var(--text); }
+.input-wrap .pwd-toggle:active { opacity: 0.6; }
 
 .btn-signin {
   display: flex;
@@ -303,14 +320,78 @@ body {
   font-weight: 700;
   letter-spacing: 0.3px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease, box-shadow 0.4s ease;
   box-shadow: 0 8px 24px var(--accent-glow);
   margin-top: 4px;
+  position: relative;
+  overflow: hidden;
 }
 .btn-signin:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(99,102,241,0.4); }
 .btn-signin:active { transform: translateY(0); }
 .btn-arrow { font-size: 18px; transition: transform var(--transition); }
 .btn-signin:hover .btn-arrow { transform: translateX(4px); }
+.btn-signin:disabled {
+  background: #16a34a !important;
+  cursor: not-allowed;
+  box-shadow: 0 0 20px rgba(22, 163, 74, 0.5), 0 4px 16px rgba(22, 163, 74, 0.3);
+  transform: none !important;
+  pointer-events: none;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+/* Fade in loading content */
+.btn-signin:disabled > * {
+  animation: btn-fade-in 0.3s ease forwards;
+}
+@keyframes btn-fade-in {
+  0%   { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+/* Shimmer sweep on loading */
+.btn-signin:disabled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,0.15) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: btn-shimmer 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes btn-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.btn-signin .btn-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.25);
+  border-top-color: #fff;
+  border-right-color: rgba(255,255,255,0.6);
+  border-radius: 50%;
+  animation: btn-spin 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  margin-right: 2px;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+/* Pulse ring on loading */
+.btn-signin:disabled::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid rgba(22, 163, 74, 0.3);
+  animation: btn-pulse 1.5s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes btn-pulse {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.08); opacity: 0; }
+}
 .auth-msg { font-size: 13px; text-align: center; color: var(--danger); min-height: 18px; }
 .auth-msg.success { color: var(--success); }
 .auth-switch { text-align: center; font-size: 13px; color: var(--text-muted); }
@@ -1033,6 +1114,14 @@ body {
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
+}
+/* Dark themes: add subtle border so icon stands out from surface */
+[data-theme="charcoal"] .tile-icon,
+[data-theme="eve"] .tile-icon {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+[data-theme="light"] .tile-icon {
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
 }
 .tile-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .tile-name {

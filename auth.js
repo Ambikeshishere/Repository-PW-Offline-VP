@@ -9,6 +9,21 @@ const COMPANY_NAME   = "Physics Wallah";
 const COMPANY_TAG    = "Sheet Repository";
 
 const USER_DB_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHH00xEJap1iWdn7vz5KBqpxG20G0w5IUVU2771CzDPQpA5vAfIhwQ48bTnxx19B0-MlrJfZOi_f8D/pub?output=csv";
+
+// ===== PASSWORD SHOW/HIDE TOGGLE =====
+function togglePassword(fieldId) {
+  const input = document.getElementById(fieldId);
+  const btn = input?.parentElement?.querySelector('.pwd-toggle');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (btn) btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    if (btn) btn.textContent = '👁';
+  }
+}
+
 // ===== EMAIL + PASSWORD LOGIN =====
 async function signIn() {
   const email = document.getElementById("email").value.trim();
@@ -25,7 +40,7 @@ async function signIn() {
   }
   if (!password) { message.innerText = "Please enter your password."; return; }
 
-  btn.innerHTML = "<span>Signing in...</span>";
+  btn.innerHTML = '<span class="btn-spinner"></span><span>Signing in...</span>';
   btn.disabled = true;
 
   try {
