@@ -24,8 +24,15 @@
         </div>
       </div>
 
-      <h1 class="auth-title">Create Account</h1>
-      <p class="auth-sub">Register with PW mail id</p>
+      <!-- Progress Steps -->
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot1">1</div>
+        <div class="step-line" id="line1"></div>
+        <div class="step-dot" id="dot2">2</div>
+      </div>
+
+      <h1 class="auth-title" id="formTitle">Create Account</h1>
+      <p class="auth-sub" id="formSub">Register with PW mail id</p>
 
       <!-- Step 1: Email + Password -->
       <div id="step1">
@@ -63,28 +70,46 @@
 
       <!-- Step 2: OTP Verification (hidden initially) -->
       <div id="step2" style="display:none;">
-        <div class="otp-info">
-          <span class="otp-email-label">OTP sent to</span>
-          <span id="otpEmailDisplay" class="otp-email-value"></span>
-        </div>
-
-        <div class="input-group">
-          <label>Enter OTP</label>
-          <div class="input-wrap">
-            <span class="input-icon">🔑</span>
-            <input type="text" id="otpInput" placeholder="6-digit OTP" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+        <!-- Email sent confirmation -->
+        <div class="otp-sent-banner">
+          <div class="otp-sent-icon">📧</div>
+          <div class="otp-sent-text">
+            <span class="otp-sent-title">OTP Sent!</span>
+            <span class="otp-sent-desc">We've sent a 6-digit code to</span>
+            <span class="otp-email-display" id="otpEmailDisplay">user@pw.live</span>
           </div>
         </div>
 
-        <div id="otpTimer" class="otp-timer">⏱ 10:00</div>
+        <!-- OTP Digit Boxes -->
+        <div class="otp-label">Enter verification code</div>
+        <div class="otp-boxes">
+          <input type="text" class="otp-digit" id="otp1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code">
+          <input type="text" class="otp-digit" id="otp2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" class="otp-digit" id="otp3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <div class="otp-divider"></div>
+          <input type="text" class="otp-digit" id="otp4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" class="otp-digit" id="otp5" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" class="otp-digit" id="otp6" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        </div>
 
-        <button class="btn-signin" id="verifyOtpBtn" onclick="verifyAndSignUp()">
+        <!-- Timer & Resend -->
+        <div class="otp-footer">
+          <div class="otp-timer-wrap">
+            <svg class="timer-ring" viewBox="0 0 36 36" width="36" height="36">
+              <circle class="timer-track" cx="18" cy="18" r="15.5" fill="none" stroke-width="2.5" />
+              <circle class="timer-fill" id="timerCircle" cx="18" cy="18" r="15.5" fill="none" stroke-width="2.5"
+                stroke-dasharray="97.4" stroke-dashoffset="0" stroke-linecap="round" />
+            </svg>
+            <span class="timer-text" id="otpTimer">10:00</span>
+          </div>
+          <button class="btn-resend" id="resendOtpBtn" onclick="resendOtp()" disabled>
+            Resend OTP <span id="resendTimer"></span>
+          </button>
+        </div>
+
+        <button class="btn-signin btn-verify" id="verifyOtpBtn" onclick="verifyAndSignUp()">
           <span>Verify & Create Account</span>
           <span class="btn-arrow">→</span>
-        </button>
-
-        <button class="btn-resend" id="resendOtpBtn" onclick="resendOtp()" disabled>
-          Resend OTP <span id="resendTimer">(30s)</span>
         </button>
       </div>
 
@@ -95,6 +120,48 @@
   </div>
 
   <style>
+    /* ─── PROGRESS STEPS ─────────────────────────────────── */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 20px;
+    }
+    .step-dot {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      color: var(--text-secondary);
+      background: var(--card-bg);
+      transition: all 0.4s ease;
+    }
+    .step-dot.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(34,211,238,0.35);
+    }
+    .step-dot.done {
+      border-color: #22c55e;
+      background: #22c55e;
+      color: #fff;
+    }
+    .step-line {
+      width: 60px; height: 2px;
+      background: var(--border);
+      transition: background 0.5s ease;
+    }
+    .step-line.done {
+      background: #22c55e;
+    }
+
+    /* ─── PASSWORD STRENGTH ──────────────────────────────── */
     .password-strength {
       height: 4px;
       border-radius: 4px;
@@ -107,44 +174,151 @@
     .strength-medium { width: 66%; background: #f97316; }
     .strength-strong { width: 100%; background: #22c55e; }
 
-    /* OTP section styles */
-    .otp-info {
+    /* ─── OTP BANNER ─────────────────────────────────────── */
+    .otp-sent-banner {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background: rgba(34,211,238,0.08);
+      gap: 14px;
+      padding: 16px 18px;
+      background: linear-gradient(135deg, rgba(34,211,238,0.1), rgba(34,211,238,0.03));
       border: 1px solid rgba(34,211,238,0.2);
-      border-radius: 10px;
-      margin-bottom: 16px;
-      font-size: 14px;
+      border-radius: 14px;
+      margin-bottom: 22px;
+      animation: bannerSlide 0.5s ease;
     }
-    .otp-email-label { color: var(--text-secondary); }
-    .otp-email-value {
+    @keyframes bannerSlide {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .otp-sent-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: rgba(34,211,238,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .otp-sent-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .otp-sent-title {
+      font-weight: 700;
+      font-size: 15px;
       color: var(--text-primary);
+    }
+    .otp-sent-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .otp-email-display {
+      font-size: 13px;
       font-weight: 600;
+      color: var(--accent);
       word-break: break-all;
     }
-    .otp-timer {
-      text-align: center;
-      font-size: 14px;
+
+    /* ─── OTP DIGIT BOXES ────────────────────────────────── */
+    .otp-label {
+      font-size: 13px;
+      font-weight: 600;
       color: var(--text-secondary);
-      margin-top: -8px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .otp-boxes {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      animation: boxesPop 0.4s ease 0.2s both;
+    }
+    @keyframes boxesPop {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .otp-digit {
+      width: 48px; height: 56px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', monospace;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--card-bg);
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.2s ease;
+      caret-color: var(--accent);
+    }
+    .otp-digit:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34,211,238,0.15), 0 4px 12px rgba(34,211,238,0.1);
+      transform: translateY(-2px);
+    }
+    .otp-digit.filled {
+      border-color: var(--accent);
+      background: rgba(34,211,238,0.06);
+    }
+    .otp-digit::-webkit-outer-spin-button,
+    .otp-digit::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .otp-digit[type=number] {
+      -moz-appearance: textfield;
+    }
+    .otp-divider {
+      width: 10px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 2px;
+    }
+
+    /* ─── OTP FOOTER (Timer + Resend) ────────────────────── */
+    .otp-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding: 0 4px;
+    }
+    .otp-timer-wrap {
+      position: relative;
+      width: 36px; height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .timer-ring { transform: rotate(-90deg); }
+    .timer-track { stroke: var(--border); }
+    .timer-fill {
+      stroke: var(--accent);
+      transition: stroke-dashoffset 1s linear, stroke 0.3s;
+    }
+    .timer-text {
+      position: absolute;
+      font-size: 11px;
+      font-weight: 700;
       font-variant-numeric: tabular-nums;
+      color: var(--text-secondary);
     }
     .btn-resend {
-      width: 100%;
-      padding: 10px;
+      padding: 8px 16px;
       border: 1px solid var(--border);
       border-radius: 10px;
       background: transparent;
       color: var(--text-secondary);
       font-family: inherit;
-      font-size: 14px;
+      font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-top: 8px;
     }
     .btn-resend:disabled {
       opacity: 0.4;
@@ -153,13 +327,20 @@
     .btn-resend:not(:disabled):hover {
       border-color: var(--accent);
       color: var(--accent);
+      background: rgba(34,211,238,0.05);
     }
-    /* fade-in animation for step2 */
-    @keyframes otpFadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+
+    /* ─── VERIFY BUTTON ──────────────────────────────────── */
+    .btn-verify {
+      margin-top: 0;
+    }
+
+    /* ─── ANIMATIONS ─────────────────────────────────────── */
+    @keyframes stepFadeIn {
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    #step2 { animation: otpFadeIn 0.4s ease; }
+    #step2 { animation: stepFadeIn 0.5s ease; }
   </style>
 
   <script>
@@ -168,10 +349,9 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwvMuuywsl4AM3OxP9lD0uv7XEcpiEyiYZVvWmFL_NC4pyOLp75SHYh59EGz8Shw8Z3/exec";
 
     // State
-    let currentOtp = "";
     let otpTimerInterval = null;
-    let otpExpiry = null;        // Date when OTP expires
-    let resendCooldown = 0;      // seconds until resend allowed
+    let otpExpiry = null;
+    let resendCooldown = 0;
     let resendInterval = null;
 
     // ─── TOGGLES ──────────────────────────────────────────────────
@@ -213,6 +393,86 @@
       el.className = "auth-msg" + (type ? " " + type : "");
     }
 
+    // ─── OTP DIGIT AUTO-ADVANCE ───────────────────────────────────
+    function setupOtpInputs() {
+      const inputs = document.querySelectorAll(".otp-digit");
+      inputs.forEach((input, idx) => {
+        input.addEventListener("input", function() {
+          this.value = this.value.replace(/[^0-9]/g, "");
+          if (this.value) {
+            this.classList.add("filled");
+            if (idx < inputs.length - 1) inputs[idx + 1].focus();
+            // Auto-submit when all 6 filled
+            if (idx === inputs.length - 1) {
+              const fullOtp = getOtpValue();
+              if (fullOtp.length === 6) verifyAndSignUp();
+            }
+          } else {
+            this.classList.remove("filled");
+          }
+        });
+        input.addEventListener("keydown", function(e) {
+          if (e.key === "Backspace" && !this.value && idx > 0) {
+            inputs[idx - 1].focus();
+            inputs[idx - 1].classList.remove("filled");
+          }
+          if (e.key === "ArrowLeft" && idx > 0) inputs[idx - 1].focus();
+          if (e.key === "ArrowRight" && idx < inputs.length - 1) inputs[idx + 1].focus();
+        });
+        // Paste support
+        input.addEventListener("paste", function(e) {
+          e.preventDefault();
+          const paste = (e.clipboardData || window.clipboardData).getData("text").replace(/[^0-9]/g, "");
+          if (!paste) return;
+          for (let i = 0; i < Math.min(paste.length, inputs.length); i++) {
+            inputs[i].value = paste[i];
+            inputs[i].classList.add("filled");
+          }
+          const nextIdx = Math.min(paste.length, inputs.length - 1);
+          inputs[nextIdx].focus();
+        });
+      });
+    }
+
+    function getOtpValue() {
+      return [...document.querySelectorAll(".otp-digit")].map(i => i.value).join("");
+    }
+
+    function clearOtpInputs() {
+      document.querySelectorAll(".otp-digit").forEach(i => { i.value = ""; i.classList.remove("filled"); });
+    }
+
+    // ─── UPDATE STEPPER ───────────────────────────────────────────
+    function goToStep(step) {
+      const dot1 = document.getElementById("dot1");
+      const dot2 = document.getElementById("dot2");
+      const line1 = document.getElementById("line1");
+      const step1 = document.getElementById("step1");
+      const step2 = document.getElementById("step2");
+      const title = document.getElementById("formTitle");
+      const sub = document.getElementById("formSub");
+
+      if (step === 1) {
+        dot1.className = "step-dot active";
+        dot2.className = "step-dot";
+        line1.className = "step-line";
+        step1.style.display = "block";
+        step2.style.display = "none";
+        title.innerText = "Create Account";
+        sub.innerText = "Register with PW mail id";
+      } else {
+        dot1.className = "step-dot done";
+        dot2.className = "step-dot active";
+        line1.className = "step-line done";
+        step1.style.display = "none";
+        step2.style.display = "block";
+        title.innerText = "Verify Email";
+        sub.innerText = "Enter the code sent to your inbox";
+        // Focus first OTP box
+        setTimeout(() => document.getElementById("otp1").focus(), 300);
+      }
+    }
+
     // ─── SEND OTP ─────────────────────────────────────────────────
     async function sendOtp() {
       const email = document.getElementById("email").value.trim();
@@ -241,21 +501,13 @@
         const data = await res.json();
 
         if (data.success) {
-          // Store email reference and show step 2
           document.getElementById("otpEmailDisplay").innerText = email;
-          document.getElementById("step1").style.display = "none";
-          document.getElementById("step2").style.display = "block";
-          setMessage("✅ OTP sent! Check your " + email + " inbox.", "success");
+          goToStep(2);
 
-          // Start OTP expiry timer (10 min)
           otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
           startOtpCountdown();
-
-          // Start resend cooldown (30s)
           startResendCooldown();
-
-          // Focus OTP input
-          document.getElementById("otpInput").focus();
+          clearOtpInputs();
         } else {
           setMessage("❌ " + (data.error || "Failed to send OTP."));
         }
@@ -287,12 +539,11 @@
 
         if (data.success) {
           setMessage("✅ New OTP sent!", "success");
-          // Reset timers
           otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
           startOtpCountdown();
           startResendCooldown();
-          document.getElementById("otpInput").value = "";
-          document.getElementById("otpInput").focus();
+          clearOtpInputs();
+          document.getElementById("otp1").focus();
         } else {
           setMessage("❌ " + (data.error || "Failed to resend OTP."));
           btn.disabled = false;
@@ -308,16 +559,13 @@
     async function verifyAndSignUp() {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
-      const otp = document.getElementById("otpInput").value.trim();
+      const otp = getOtpValue();
       const btn = document.getElementById("verifyOtpBtn");
-      const message = document.getElementById("authMessage");
 
       setMessage("");
 
-      if (!otp || otp.length !== 6) { setMessage("Please enter the 6-digit OTP."); return; }
-      if (!/^\d{6}$/.test(otp)) { setMessage("OTP must be 6 digits."); return; }
+      if (otp.length !== 6) { setMessage("Please enter all 6 digits of the OTP."); return; }
 
-      // Check expiry on client side
       if (otpExpiry && Date.now() > otpExpiry.getTime()) {
         setMessage("⏰ OTP has expired. Please resend.");
         return;
@@ -327,7 +575,6 @@
       btn.disabled = true;
 
       try {
-        // Step 1: Verify OTP
         const verifyRes = await fetch(SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
@@ -343,7 +590,6 @@
           return;
         }
 
-        // Step 2: Create account
         btn.innerHTML = '<span class="btn-spinner"></span><span>Creating account...</span>';
 
         const signupRes = await fetch(SCRIPT_URL, {
@@ -370,26 +616,33 @@
       }
     }
 
-    // ─── OTP COUNTDOWN (10 min) ───────────────────────────────────
+    // ─── OTP COUNTDOWN (10 min) with ring animation ───────────────
     function startOtpCountdown() {
       if (otpTimerInterval) clearInterval(otpTimerInterval);
       const timerEl = document.getElementById("otpTimer");
+      const circle = document.getElementById("timerCircle");
+      const circumference = 97.4; // 2 * PI * 15.5
 
       otpTimerInterval = setInterval(() => {
-        if (!otpExpiry) { timerEl.innerText = "⏱ --:--"; return; }
+        if (!otpExpiry) { timerEl.innerText = "--:--"; return; }
 
         const remaining = Math.max(0, Math.floor((otpExpiry.getTime() - Date.now()) / 1000));
+        const total = 600; // 10 min
         const min = String(Math.floor(remaining / 60)).padStart(2, "0");
         const sec = String(remaining % 60).padStart(2, "0");
-        timerEl.innerText = "⏱ " + min + ":" + sec;
+        timerEl.innerText = min + ":" + sec;
+
+        // Update ring
+        const offset = circumference * (1 - remaining / total);
+        circle.setAttribute("stroke-dashoffset", offset);
 
         if (remaining <= 0) {
           clearInterval(otpTimerInterval);
           otpTimerInterval = null;
-          timerEl.innerText = "⏱ Expired";
-          timerEl.style.color = "#ef4444";
+          timerEl.innerText = "Expired";
+          circle.style.stroke = "#ef4444";
         } else {
-          timerEl.style.color = remaining < 60 ? "#f97316" : "var(--text-secondary)";
+          circle.style.stroke = remaining < 60 ? "#f97316" : "var(--accent)";
         }
       }, 1000);
     }
@@ -421,11 +674,15 @@
       if (e.key !== "Enter") return;
       const step2 = document.getElementById("step2");
       if (step2.style.display !== "none") {
-        verifyAndSignUp();
+        const otp = getOtpValue();
+        if (otp.length === 6) verifyAndSignUp();
       } else {
         sendOtp();
       }
     });
+
+    // ─── INIT ─────────────────────────────────────────────────────
+    setupOtpInputs();
 
     // ─── THEME ────────────────────────────────────────────────────
     const t = localStorage.getItem("companyTheme") || "charcoal";
