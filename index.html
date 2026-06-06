@@ -188,6 +188,26 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <!-- 🎮 Offline Breakout Game -->
+    <div class="offline-game" id="offlineGame">
+      <div class="game-header">
+        <span class="game-title">🚫 No Internet</span>
+        <span class="game-subtitle">But you can still play!</span>
+      </div>
+      <div class="game-canvas-wrap">
+        <canvas id="gameCanvas" width="640" height="400"></canvas>
+      </div>
+      <div class="game-hud">
+        <span class="game-score">🏆 <span id="gameScore">0</span></span>
+        <span class="game-lives">❤️ <span id="gameLives">3</span></span>
+        <span class="game-level">🎯 Level <span id="gameLevel">1</span></span>
+      </div>
+      <div class="game-actions">
+        <button class="game-btn" id="gameRetryBtn" onclick="retryConnection()">🔄 Retry</button>
+        <button class="game-btn game-btn-secondary" onclick="resetGame()">🔄 New Game</button>
+      </div>
+    </div>
+
     <!-- Footer (hover to reveal) -->
     <footer class="app-footer">
       <span class="footer-content">

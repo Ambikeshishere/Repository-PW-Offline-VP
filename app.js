@@ -132,10 +132,10 @@ async function fetchSheetsFromAPI() {
     console.log("🌐 Fetched from API");
   } catch (err) {
     console.error("Error fetching sheets:", err);
-    document.getElementById("sheetList").innerHTML = `
-      <div class="empty-state">
-        <p>Failed to load sheets. Please refresh.</p>
-      </div>`;
+    // If we already have cached data, keep showing it
+    if (allSheets.length === 0) {
+      showOfflineGame();
+    }
   }
 }
 
@@ -598,6 +598,341 @@ function toggleMobileNav() {
   const backdrop = document.getElementById("navBackdrop");
   if (navCenter) navCenter.classList.toggle("open");
   if (backdrop) backdrop.classList.toggle("show");
+}
+
+// ===== 🎮 OFFLINE BREAKOUT GAME =====
+
+/** Show the offline game (hides sheets, shows canvas) */
+function showOfflineGame() {
+  const game = document.getElementById("offlineGame");
+  if (game) {
+    game.classList.add("show");
+    startGame(); // defined below
+  }
+}
+
+/** Retry connection — hides game, reloads sheets */
+function retryConnection() {
+  const game = document.getElementById("offlineGame");
+  if (game) game.classList.remove("show");
+  if (typeof refreshSheets === "function") refreshSheets();
+}
+
+// ─── Breakout Engine ────────────────────────────────────────────
+
+let gameRunning = false;
+let gameAnim = null;
+
+const BRICK_ROWS = 6;
+const BRICK_COLS = 8;
+const BRICK_W = 70;
+const BRICK_H = 20;
+const BRICK_PAD = 6;
+const BRICK_TOP = 40;
+const BRICK_LEFT = 15;
+
+const COLORS = ["#ef4444","#f97316","#eab308","#22c55e","#06b6d4","#8b5cf6","#ec4899"];
+
+let bricks, ball, paddle, score, lives, level, combo;
+
+function resetBricks(lvl) {
+  bricks = [];
+  const rows = Math.min(BRICK_ROWS, 3 + lvl);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < BRICK_COLS; c++) {
+      bricks.push({
+        x: BRICK_LEFT + c * (BRICK_W + BRICK_PAD),
+        y: BRICK_TOP + r * (BRICK_H + BRICK_PAD),
+        w: BRICK_W, h: BRICK_H,
+        alive: true,
+        color: COLORS[r % COLORS.length]
+      });
+    }
+  }
+}
+
+function resetBall() {
+  ball = { x: 320, y: 330, dx: 3, dy: -3, r: 6 };
+}
+
+function resetPaddle() {
+  paddle = { x: 270, w: 100, h: 14, y: 372 };
+}
+
+function startGame() {
+  const canvas = document.getElementById("gameCanvas");
+  if (!canvas) return;
+  canvas.width = 640;
+  canvas.height = 400;
+
+  score = 0; lives = 3; level = 1; combo = 0;
+  resetPaddle();
+  resetBall();
+  resetBricks(level);
+  updateHUD();
+  gameRunning = true;
+
+  if (gameAnim) cancelAnimationFrame(gameAnim);
+  gameLoop(canvas);
+}
+
+function gameLoop(canvas) {
+  if (!gameRunning) return;
+  const ctx = canvas.getContext("2d");
+  update();
+  draw(ctx);
+  gameAnim = requestAnimationFrame(() => gameLoop(canvas));
+}
+
+function update() {
+  // Move ball
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  // Wall bounce (left/right/top)
+  if (ball.x - ball.r < 0 || ball.x + ball.r > 640) ball.dx = -ball.dx;
+  if (ball.y - ball.r < 0) ball.dy = -ball.dy;
+
+  // Bottom — crossed the red baseline = lose life
+  if (ball.y + ball.r > 390) {
+    lives--;
+    combo = 0;
+    updateHUD();
+    if (lives <= 0) { gameOver(); return; }
+    resetBall();
+    resetPaddle();
+    return;
+  }
+
+  // Paddle bounce
+  if (ball.dy > 0 &&
+      ball.y + ball.r >= paddle.y &&
+      ball.y + ball.r <= paddle.y + paddle.h + 4 &&
+      ball.x >= paddle.x - ball.r &&
+      ball.x <= paddle.x + paddle.w + ball.r) {
+    // Angle depends on where ball hits paddle
+    const hit = (ball.x - paddle.x) / paddle.w; // 0..1
+    const angle = (hit - 0.5) * Math.PI * 0.7; // -63° .. +63°
+    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+    ball.dx = Math.cos(angle) * speed;
+    ball.dy = -Math.abs(Math.sin(angle) * speed);
+    // Clamp minimum vertical speed
+    if (Math.abs(ball.dy) < 1.5) ball.dy = -2;
+  }
+
+  // Brick collision
+  for (const brick of bricks) {
+    if (!brick.alive) continue;
+    if (rectCircleCollide(brick, ball)) {
+      brick.alive = false;
+      combo++;
+      score += 10 * Math.min(combo, 5);
+      updateHUD();
+      // Basic bounce
+      const overlapX = Math.min(
+        ball.x + ball.r - brick.x,
+        brick.x + brick.w - (ball.x - ball.r)
+      );
+      const overlapY = Math.min(
+        ball.y + ball.r - brick.y,
+        brick.y + brick.h - (ball.y - ball.r)
+      );
+      if (overlapX < overlapY) ball.dx = -ball.dx;
+      else ball.dy = -ball.dy;
+      break;
+    }
+  }
+
+  // Level complete
+  if (bricks.every(b => !b.alive)) {
+    level++;
+    combo = 0;
+    resetBall();
+    resetPaddle();
+    resetBricks(level);
+    updateHUD();
+  }
+}
+
+function draw(ctx) {
+  ctx.clearRect(0, 0, 640, 400);
+
+  // Background grid
+  ctx.fillStyle = "#1a1a2e";
+  ctx.fillRect(0, 0, 640, 400);
+  ctx.strokeStyle = "rgba(255,255,255,0.03)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 640; x += 32) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 400); ctx.stroke();
+  }
+  for (let y = 0; y < 400; y += 32) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(640, y); ctx.stroke();
+  }
+
+  // Bricks
+  for (const brick of bricks) {
+    if (!brick.alive) continue;
+    ctx.fillStyle = brick.color;
+    ctx.shadowColor = brick.color;
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.roundRect(brick.x, brick.y, brick.w, brick.h, 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Inner highlight
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.beginPath();
+    ctx.roundRect(brick.x + 2, brick.y + 2, brick.w - 4, 6, 2);
+    ctx.fill();
+  }
+
+  // Danger zone — glow below paddle
+  const grad = ctx.createLinearGradient(0, 388, 0, 400);
+  grad.addColorStop(0, "rgba(239,68,68,0)");
+  grad.addColorStop(1, "rgba(239,68,68,0.25)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 388, 640, 12);
+
+  // Baseline — ground line (cross the line = lose life)
+  ctx.strokeStyle = "#ef4444";
+  ctx.lineWidth = 2;
+  ctx.shadowColor = "#ef4444";
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.moveTo(0, 390);
+  ctx.lineTo(640, 390);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Baseline label
+  ctx.fillStyle = "rgba(239,68,68,0.5)";
+  ctx.font = "10px 'DM Sans', sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText("⬇ DEAD ZONE", 635, 398);
+
+  // Paddle
+  ctx.fillStyle = "#22d3ee";
+  ctx.shadowColor = "#22d3ee";
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // Paddle highlight
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  ctx.beginPath();
+  ctx.roundRect(paddle.x + 4, paddle.y + 2, paddle.w - 8, 4, 2);
+  ctx.fill();
+
+  // Ball
+  ctx.fillStyle = "#fff";
+  ctx.shadowColor = "#fff";
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // Ball glow core
+  ctx.fillStyle = "#67e8f9";
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r * 0.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function rectCircleCollide(rect, circle) {
+  const cx = Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
+  const cy = Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
+  const dx = circle.x - cx;
+  const dy = circle.y - cy;
+  return dx * dx + dy * dy < circle.r * circle.r;
+}
+
+function updateHUD() {
+  const s = document.getElementById("gameScore");
+  const l = document.getElementById("gameLives");
+  const lv = document.getElementById("gameLevel");
+  if (s) s.textContent = score;
+  if (l) l.textContent = lives;
+  if (lv) lv.textContent = level;
+}
+
+function gameOver() {
+  gameRunning = false;
+  if (gameAnim) { cancelAnimationFrame(gameAnim); gameAnim = null; }
+
+  const canvas = document.getElementById("gameCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.fillRect(0, 0, 640, 400);
+
+  ctx.fillStyle = "#ef4444";
+  ctx.font = "bold 36px 'Plus Jakarta Sans', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("💀 GAME OVER", 320, 170);
+
+  ctx.fillStyle = "#f1f5f9";
+  ctx.font = "18px 'DM Sans', sans-serif";
+  ctx.fillText(`Score: ${score}  |  Level: ${level}`, 320, 220);
+
+  ctx.fillStyle = "#64748b";
+  ctx.font = "14px 'DM Sans', sans-serif";
+  ctx.fillText("🔄 New Game  |  🔄 Retry Connection", 320, 260);
+}
+
+function resetGame() {
+  if (gameAnim) { cancelAnimationFrame(gameAnim); gameAnim = null; }
+  gameRunning = false;
+  startGame();
+}
+
+// ─── Mouse / Touch controls ─────────────────────────────────────
+document.addEventListener("DOMContentLoaded", function() {
+  const canvas = document.getElementById("gameCanvas");
+  if (!canvas) return;
+
+  function movePaddle(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvas.width / rect.width;
+    let mx = (clientX - rect.left) * scale;
+    mx = Math.max(0, Math.min(mx, 640 - paddle.w));
+    paddle.x = mx;
+  }
+
+  canvas.addEventListener("mousemove", e => {
+    if (gameRunning) movePaddle(e.clientX);
+  });
+  canvas.addEventListener("touchmove", e => {
+    e.preventDefault();
+    if (gameRunning) movePaddle(e.touches[0].clientX);
+  }, { passive: false });
+});
+
+// ─── Online / Offline detection ─────────────────────────────────
+// Show game automatically when internet goes away, hide when back
+window.addEventListener("offline", function() {
+  console.log("📡 Internet lost — showing offline game");
+  showOfflineGame();
+});
+
+window.addEventListener("online", function() {
+  console.log("📡 Internet back — retrying connection");
+  const game = document.getElementById("offlineGame");
+  if (game) game.classList.remove("show");
+  if (gameRunning) {
+    gameRunning = false;
+    if (gameAnim) { cancelAnimationFrame(gameAnim); gameAnim = null; }
+  }
+  // Reload sheets if we were showing the game
+  if (typeof refreshSheets === "function") refreshSheets();
+});
+
+// Also check on load — if offline, show game immediately
+if (!navigator.onLine) {
+  console.log("📡 Starting offline — showing game");
+  // Delay to ensure DOM is ready
+  setTimeout(showOfflineGame, 500);
 }
 
 // ===== PW LOGO DOODLE WALLPAPER =====
