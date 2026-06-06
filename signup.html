@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physics Wallah — Sign Up</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-body">
+
+  <div class="bg-doodles" id="bgDoodles"></div>
+  <div class="bg-grid"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/d/dd/Physics_wallah_logo.svg" alt="PW Logo" style="width:32px;height:32px;object-fit:contain;"></div>
+        <div>
+          <span class="brand-name">Physics Wallah</span>
+          <span class="brand-tag">Sheet Repository</span>
+        </div>
+      </div>
+
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-sub">Register with PW mail id</p>
+
+      <div class="input-group">
+        <label>Email</label>
+        <div class="input-wrap">
+          <span class="input-icon">✉</span>
+          <input type="email" id="email" placeholder="you@pw.live" autocomplete="email">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="password" placeholder="Create a password" autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Confirm Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="confirmPassword" placeholder="Re-enter your password" autocomplete="new-password">
+        </div>
+      </div>
+
+      <button class="btn-signin" id="signupBtn" onclick="signUp()">
+        <span>Create Account</span>
+        <span class="btn-arrow">→</span>
+      </button>
+
+      <p id="authMessage" class="auth-msg"></p>
+
+      <p class="auth-switch">Already have an account? <a href="login.html">Sign In</a></p>
+    </div>
+  </div>
+
+  <style>
+    .password-strength {
+      height: 4px;
+      border-radius: 4px;
+      margin-top: 6px;
+      transition: all 0.3s ease;
+      background: var(--border);
+    }
+    .strength-bar { height: 100%; border-radius: 4px; transition: all 0.3s ease; }
+    .strength-weak   { width: 33%; background: #ef4444; }
+    .strength-medium { width: 66%; background: #f97316; }
+    .strength-strong { width: 100%; background: #22c55e; }
+  </style>
+
+  <script>
+    // ⚙️ CONFIG
+    const ALLOWED_DOMAIN = "@pw.live";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRPYm8C2KJyKOeX-NHUzQbnI50HPT8pRAMYGFBHOcgcqJzmcSj5SDZ292m805VWun51w/exec";
+
+    // Password strength indicator
+    const passwordInput = document.getElementById("password");
+    const strengthBar = document.createElement("div");
+    strengthBar.className = "password-strength";
+    const bar = document.createElement("div");
+    bar.className = "strength-bar";
+    strengthBar.appendChild(bar);
+    passwordInput.parentElement.parentElement.appendChild(strengthBar);
+
+    passwordInput.addEventListener("input", function() {
+      const val = this.value;
+      bar.className = "strength-bar";
+      if (val.length === 0) { bar.style.width = "0"; }
+      else if (val.length < 6) { bar.classList.add("strength-weak"); }
+      else if (val.length < 10) { bar.classList.add("strength-medium"); }
+      else { bar.classList.add("strength-strong"); }
+    });
+
+    async function signUp() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const confirm = document.getElementById("confirmPassword").value.trim();
+      const message = document.getElementById("authMessage");
+      const btn = document.getElementById("signupBtn");
+
+      message.innerText = "";
+      message.className = "auth-msg";
+
+      if (!email) { message.innerText = "Please enter your email."; return; }
+      if (!email.endsWith(ALLOWED_DOMAIN)) { message.innerText = `Only ${ALLOWED_DOMAIN} emails are allowed.`; return; }
+      if (!password) { message.innerText = "Please enter a password."; return; }
+      if (password.length < 6) { message.innerText = "Password must be at least 6 characters."; return; }
+      if (password !== confirm) { message.innerText = "Passwords do not match."; return; }
+
+      btn.innerHTML = "<span>Creating account...</span>";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "signup", email, password })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          message.className = "auth-msg success";
+          message.innerText = "✅ Account created! Redirecting to login...";
+          setTimeout(() => { window.location.href = "login.html"; }, 2000);
+        } else {
+          message.innerText = "❌ " + (data.error || "Error creating account.");
+          btn.innerHTML = "<span>Create Account</span><span class='btn-arrow'>→</span>";
+          btn.disabled = false;
+        }
+      } catch (err) {
+        message.innerText = "❌ Network error. Check console for details.";
+        console.error("Signup error:", err);
+        btn.innerHTML = "<span>Create Account</span><span class='btn-arrow'>→</span>";
+        btn.disabled = false;
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") signUp();
+    });
+
+    const t = localStorage.getItem("companyTheme") || "charcoal";
+    document.documentElement.setAttribute("data-theme", t);
+  </script>
+</body>
+</html>

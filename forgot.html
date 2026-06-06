@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physics Wallah — Reset Password</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .step { display: none; flex-direction: column; gap: 20px; }
+    .step.active { display: flex; }
+    .otp-inputs {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 8px 0;
+    }
+    .otp-inputs input {
+      width: 48px; height: 56px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      font-family: var(--font-display);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      outline: none;
+      transition: var(--transition);
+      caret-color: var(--accent);
+    }
+    .otp-inputs input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .otp-inputs input.filled { border-color: var(--accent); color: var(--accent2); }
+    .resend-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .resend-btn {
+      background: none;
+      border: none;
+      color: var(--accent2);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 500;
+      padding: 0;
+    }
+    .resend-btn:disabled { color: var(--text-muted); cursor: default; }
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border-bright);
+      transition: all 0.3s ease;
+    }
+    .step-dot.active { background: var(--accent); width: 24px; border-radius: 4px; }
+    .step-dot.done { background: #22c55e; }
+    .password-strength {
+      height: 4px; border-radius: 4px;
+      margin-top: 6px; background: var(--border);
+    }
+    .strength-bar { height: 100%; border-radius: 4px; transition: all 0.3s ease; }
+    .strength-weak   { width: 33%; background: #ef4444; }
+    .strength-medium { width: 66%; background: #f97316; }
+    .strength-strong { width: 100%; background: #22c55e; }
+  </style>
+</head>
+<body class="auth-body">
+
+  <div class="bg-doodles" id="bgDoodles"></div>
+  <div class="bg-grid"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/d/dd/Physics_wallah_logo.svg" alt="PW Logo" style="width:32px;height:32px;object-fit:contain;"></div>
+        <div>
+          <span class="brand-name">Physics Wallah</span>
+          <span class="brand-tag">Sheet Repository</span>
+        </div>
+      </div>
+
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot1"></div>
+        <div class="step-dot" id="dot2"></div>
+        <div class="step-dot" id="dot3"></div>
+      </div>
+
+      <!-- STEP 1: Enter Email -->
+      <div class="step active" id="step1">
+        <div>
+          <h1 class="auth-title">Forgot Password</h1>
+          <p class="auth-sub">Enter your company email to receive OTP</p>
+        </div>
+        <div class="input-group">
+          <label>Email</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉</span>
+            <input type="email" id="emailInput" placeholder="you@pw.live" autocomplete="email">
+          </div>
+        </div>
+        <button class="btn-signin" id="sendOTPBtn" onclick="sendOTP()">
+          <span>Send OTP</span>
+          <span class="btn-arrow">→</span>
+        </button>
+        <p id="msg1" class="auth-msg"></p>
+        <p class="auth-switch"><a href="login.html">← Back to Sign In</a></p>
+      </div>
+
+      <!-- STEP 2: Enter OTP -->
+      <div class="step" id="step2">
+        <div>
+          <h1 class="auth-title">Enter OTP</h1>
+          <p class="auth-sub" id="otpSubText">OTP sent to your email</p>
+        </div>
+        <div class="otp-inputs">
+          <input type="text" maxlength="1" class="otp-box" id="otp1" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="otp2" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="otp3" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="otp4" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="otp5" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="otp6" inputmode="numeric">
+        </div>
+        <div class="resend-row">
+          <span id="timerText">Resend in <strong id="timerCount">60</strong>s</span>
+          <button class="resend-btn" id="resendBtn" disabled onclick="resendOTP()">Resend OTP</button>
+        </div>
+        <button class="btn-signin" id="verifyOTPBtn" onclick="verifyOTP()">
+          <span>Verify OTP</span>
+          <span class="btn-arrow">→</span>
+        </button>
+        <p id="msg2" class="auth-msg"></p>
+      </div>
+
+      <!-- STEP 3: New Password -->
+      <div class="step" id="step3">
+        <div>
+          <h1 class="auth-title">New Password</h1>
+          <p class="auth-sub">Set your new password</p>
+        </div>
+        <div class="input-group">
+          <label>New Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="newPassword" placeholder="Enter new password" autocomplete="new-password">
+          </div>
+          <div class="password-strength"><div class="strength-bar" id="strengthBar"></div></div>
+        </div>
+        <div class="input-group">
+          <label>Confirm Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="confirmPassword" placeholder="Re-enter new password" autocomplete="new-password">
+          </div>
+        </div>
+        <button class="btn-signin" id="resetBtn" onclick="resetPassword()">
+          <span>Reset Password</span>
+          <span class="btn-arrow">→</span>
+        </button>
+        <p id="msg3" class="auth-msg"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ⚙️ CONFIG
+    const ALLOWED_DOMAIN = "@pw.live";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRPYm8C2KJyKOeX-NHUzQbnI50HPT8pRAMYGFBHOcgcqJzmcSj5SDZ292m805VWun51w/exec";
+
+    let userEmail = "";
+    let verifiedOTP = "";
+    let timerInterval;
+
+    const t = localStorage.getItem("companyTheme") || "charcoal";
+    document.documentElement.setAttribute("data-theme", t);
+
+    function goToStep(n) {
+      document.querySelectorAll(".step").forEach((s, i) => {
+        s.classList.toggle("active", i + 1 === n);
+      });
+      [1, 2, 3].forEach(i => {
+        const dot = document.getElementById("dot" + i);
+        dot.classList.remove("active", "done");
+        if (i < n)       dot.classList.add("done");
+        else if (i === n) dot.classList.add("active");
+      });
+    }
+
+    async function sendOTP() {
+      const email = document.getElementById("emailInput").value.trim();
+      const msg   = document.getElementById("msg1");
+      const btn   = document.getElementById("sendOTPBtn");
+      msg.innerText = "";
+      msg.className = "auth-msg";
+      if (!email) { msg.innerText = "Please enter your email."; return; }
+      if (!email.endsWith(ALLOWED_DOMAIN)) { msg.innerText = `Only ${ALLOWED_DOMAIN} emails allowed.`; return; }
+
+      btn.innerHTML = "<span>Sending OTP...</span>";
+      btn.disabled = true;
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "sendOTP", email })
+        });
+        const data = await res.json();
+        if (data.success) {
+          userEmail = email;
+          document.getElementById("otpSubText").innerText = "OTP sent to " + email;
+          goToStep(2);
+          startTimer();
+          document.getElementById("otp1").focus();
+        } else {
+          msg.innerText = "❌ " + (data.error || "Email not registered.");
+          btn.innerHTML = "<span>Send OTP</span><span class='btn-arrow'>→</span>";
+          btn.disabled = false;
+        }
+      } catch (err) {
+        msg.innerText = "❌ Network error. Check console.";
+        console.error("sendOTP error:", err);
+        btn.innerHTML = "<span>Send OTP</span><span class='btn-arrow'>→</span>";
+        btn.disabled = false;
+      }
+    }
+
+    document.querySelectorAll(".otp-box").forEach((input, idx, all) => {
+      input.addEventListener("input", function() {
+        this.value = this.value.replace(/[^0-9]/g, "");
+        if (this.value) {
+          this.classList.add("filled");
+          if (idx < all.length - 1) all[idx + 1].focus();
+          const otp = [...all].map(i => i.value).join("");
+          if (otp.length === 6) verifyOTP();
+        } else {
+          this.classList.remove("filled");
+        }
+      });
+      input.addEventListener("keydown", function(e) {
+        if (e.key === "Backspace" && !this.value && idx > 0) {
+          all[idx - 1].focus();
+          all[idx - 1].classList.remove("filled");
+        }
+      });
+    });
+
+    function startTimer() {
+      let seconds = 60;
+      document.getElementById("timerCount").innerText = seconds;
+      document.getElementById("timerText").style.display = "inline";
+      document.getElementById("resendBtn").disabled = true;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        seconds--;
+        document.getElementById("timerCount").innerText = seconds;
+        if (seconds <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById("timerText").style.display = "none";
+          document.getElementById("resendBtn").disabled = false;
+        }
+      }, 1000);
+    }
+
+    async function resendOTP() {
+      document.getElementById("msg2").innerText = "";
+      document.querySelectorAll(".otp-box").forEach(i => { i.value = ""; i.classList.remove("filled"); });
+      document.getElementById("sendOTPBtn").innerHTML = "<span>Send OTP</span><span class='btn-arrow'>→</span>";
+      document.getElementById("sendOTPBtn").disabled = false;
+      document.getElementById("emailInput").value = userEmail;
+      goToStep(1);
+      await sendOTP();
+    }
+
+    async function verifyOTP() {
+      const otp = [...document.querySelectorAll(".otp-box")].map(i => i.value).join("");
+      const msg = document.getElementById("msg2");
+      const btn = document.getElementById("verifyOTPBtn");
+      msg.innerText = "";
+      msg.className = "auth-msg";
+      if (otp.length < 6) { msg.innerText = "Please enter all 6 digits."; return; }
+
+      btn.innerHTML = "<span>Verifying...</span>";
+      btn.disabled = true;
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "verifyOTP", email: userEmail, otp })
+        });
+        const data = await res.json();
+        if (data.success) {
+          verifiedOTP = otp;
+          clearInterval(timerInterval);
+          goToStep(3);
+          document.getElementById("newPassword").focus();
+        } else {
+          msg.innerText = "❌ " + (data.error || "Invalid or expired OTP.");
+          btn.innerHTML = "<span>Verify OTP</span><span class='btn-arrow'>→</span>";
+          btn.disabled = false;
+        }
+      } catch (err) {
+        msg.innerText = "❌ Network error. Check console.";
+        console.error("verifyOTP error:", err);
+        btn.innerHTML = "<span>Verify OTP</span><span class='btn-arrow'>→</span>";
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById("newPassword").addEventListener("input", function() {
+      const bar = document.getElementById("strengthBar");
+      bar.className = "strength-bar";
+      if (this.value.length === 0)       bar.style.width = "0";
+      else if (this.value.length < 6)    bar.classList.add("strength-weak");
+      else if (this.value.length < 10)   bar.classList.add("strength-medium");
+      else                               bar.classList.add("strength-strong");
+    });
+
+    async function resetPassword() {
+      const password = document.getElementById("newPassword").value.trim();
+      const confirm  = document.getElementById("confirmPassword").value.trim();
+      const msg      = document.getElementById("msg3");
+      const btn      = document.getElementById("resetBtn");
+      msg.innerText = "";
+      msg.className = "auth-msg";
+      if (!password)             { msg.innerText = "Please enter a new password."; return; }
+      if (password.length < 6)   { msg.innerText = "Password must be at least 6 characters."; return; }
+      if (password !== confirm)  { msg.innerText = "Passwords do not match."; return; }
+
+      btn.innerHTML = "<span>Resetting...</span>";
+      btn.disabled = true;
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "resetPassword", email: userEmail, otp: verifiedOTP, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+          msg.className = "auth-msg success";
+          msg.innerText = "✅ Password reset! Redirecting to login...";
+          setTimeout(() => { window.location.href = "login.html"; }, 2000);
+        } else {
+          msg.innerText = "❌ " + (data.error || "Failed to reset password.");
+          btn.innerHTML = "<span>Reset Password</span><span class='btn-arrow'>→</span>";
+          btn.disabled = false;
+        }
+      } catch (err) {
+        msg.innerText = "❌ Network error. Check console.";
+        console.error("resetPassword error:", err);
+        btn.innerHTML = "<span>Reset Password</span><span class='btn-arrow'>→</span>";
+        btn.disabled = false;
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      if (document.getElementById("step1").classList.contains("active")) sendOTP();
+      else if (document.getElementById("step3").classList.contains("active")) resetPassword();
+    });
+  </script>
+</body>
+</html>

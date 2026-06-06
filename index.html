@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physics Wallah — Sheet Repository</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Extra smart features */
+    .sidebar-theme-selector {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-top: 4px;
+    }
+    .theme-dot {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .theme-dot:hover { border-color: var(--accent); transform: scale(1.1); }
+    .theme-dot.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+    .td-dark { background: #0d0d0d; color: #06b6d4; }
+    .td-light { background: #f8f9fc; color: #6366f1; }
+    .td-eve { background: #12100e; color: #f59e0b; }
+
+    /* Sidebar section label */
+    .nav-section-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      padding: 12px 14px 4px;
+      font-weight: 700;
+    }
+
+    /* Responsive fixes for index */
+    .theme-select-compact {
+      width: 100%;
+      padding: 6px 10px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .theme-select-compact:hover { border-color: var(--border-bright); }
+    .theme-select-compact:focus { border-color: var(--accent); }
+    .theme-select-compact option { background: var(--bg2); color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="bg-doodles" id="bgDoodles"></div>
+
+<script>
+  const user = localStorage.getItem("loggedUser");
+  if (!user) window.location.href = "login.html";
+</script>
+
+<div class="app">
+  <!-- Top Navigation Bar -->
+  <nav class="app-navbar">
+    <div class="nav-left">
+      <div class="logo">
+        <span class="logo-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/d/dd/Physics_wallah_logo.svg" alt="PW Logo"></span>
+        <span class="logo-text">Physics Wallah</span>
+      </div>
+    </div>
+
+    <!-- Mobile hamburger -->
+    <button class="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">☰</button>
+
+    <!-- Center nav links -->
+    <div class="nav-center" id="navCenter">
+      <div class="nav-item menu-item active" data-filter="all">
+        <span class="nav-item-icon">🗂️</span>
+        All Sheets
+      </div>
+      <div class="nav-item menu-item" data-filter="pinned">
+        <span class="nav-item-icon">📌</span>
+        Pinned
+      </div>
+      <div class="nav-item has-dropdown" id="catDropdown">
+        <span class="nav-item-icon">📁</span>
+        Categories <span class="dd-arrow">▾</span>
+        <div class="nav-dropdown" id="catDropdownMenu">
+          <div class="dd-item menu-item" data-filter="sales">📈 Sales</div>
+          <div class="dd-item menu-item" data-filter="marketing">📣 Marketing</div>
+          <div class="dd-item menu-item" data-filter="acads">📚 Acads</div>
+          <div class="dd-item menu-item" data-filter="advertisement">📢 Advertisement</div>
+          <div class="dd-item menu-item" data-filter="offline">🏫 Offline Gen</div>
+          <div class="dd-item menu-item" data-filter="ops">⚙️ Operations</div>
+          <div class="dd-item menu-item" data-filter="hr">👥 HR</div>
+          <div class="dd-item menu-item" data-filter="video">🎬 Videos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right section -->
+    <div class="nav-right">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search..." autocomplete="off">
+      </div>
+      <button class="refresh-btn" onclick="refreshSheets()" title="Refresh">🔄</button>
+      <div class="nav-user-box" onclick="toggleUserMenu()">
+        <span class="user-avatar">👤</span>
+        <span class="user-chevron" id="userChevron">▾</span>
+
+        <!-- User dropdown (inside nav-user-box for correct positioning) -->
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-user-info">
+            <span class="dropdown-user-icon">👤</span>
+            <div>
+              <div class="dropdown-user-name" id="dropdownUserName">User</div>
+              <div class="dropdown-user-email" id="dropdownUserEmail">user@pw.live</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-section-label">🎨 Theme</div>
+          <div class="dropdown-theme-selector">
+            <div class="theme-dot td-light active" data-theme="light" onclick="setTheme('light');event.stopPropagation();" title="Light">🌞</div>
+            <div class="theme-dot td-eve" data-theme="eve" onclick="setTheme('eve');event.stopPropagation();" title="Dark">🌆</div>
+            <div class="theme-dot td-dark" data-theme="charcoal" onclick="setTheme('charcoal');event.stopPropagation();" title="Charcoal">🌑</div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-logout-btn" onclick="logout();event.stopPropagation();">↩ Logout</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Mobile nav backdrop -->
+  <div class="nav-backdrop" id="navBackdrop" onclick="toggleMobileNav()"></div>
+
+  <!-- Main Content -->
+  <main class="content">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Sheet Repository</h1>
+      <span class="sheet-count" id="sheetCount">0 sheets</span>
+    </div>
+
+    <!-- Pinned Section -->
+    <div class="section" id="pinnedSection">
+      <div class="section-header">
+        <h2 class="section-title">📌 Pinned</h2>
+        <span id="pinnedCount" style="font-size:12px;color:var(--text-muted);"></span>
+      </div>
+      <div class="pinned-grid" id="pinnedContainer"></div>
+      <div class="empty-state" id="pinnedEmpty">
+        <p>No pinned sheets yet. Click 📌 on a sheet to pin it.</p>
+      </div>
+    </div>
+
+
+
+    <!-- All Sheets Section -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">📂 All Sheets</h2>
+        <span id="allCount" style="font-size:12px;color:var(--text-muted);"></span>
+      </div>
+      <div class="sheet-list" id="sheetList"></div>
+      <div class="empty-state" id="listEmpty">
+        <p>No sheets found.</p>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Footer (hover to reveal) -->
+    <footer class="app-footer">
+      <span class="footer-content">
+        <span class="ft-pwian">BY PWIAN | FOR PWIAN | 2026</span>
+      </span>
+    </footer>
+  </main>
+</div>
+
+<script src="app.js"></script>
+<script>
+  // ===== RECENT SHEETS (opened via openSheet) =====
+  function getRecent() {
+    try {
+      const data = JSON.parse(localStorage.getItem("recentSheets")) || {};
+      return data[currentUser] || [];
+    } catch { return []; }
+  }
+
+  function addRecent(name, link) {
+    try {
+      const data = JSON.parse(localStorage.getItem("recentSheets")) || {};
+      let recent = data[currentUser] || [];
+      recent = recent.filter(s => s.name !== name);
+      recent.unshift({ name, link, time: Date.now() });
+      recent = recent.slice(0, 10);
+      data[currentUser] = recent;
+      localStorage.setItem("recentSheets", JSON.stringify(data));
+    } catch(e) { console.error(e); }
+  }
+
+  function clearRecent() {
+    try {
+      const data = JSON.parse(localStorage.getItem("recentSheets")) || {};
+      data[currentUser] = [];
+      localStorage.setItem("recentSheets", JSON.stringify(data));
+      renderRecent();
+    } catch(e) {}
+  }
+
+  function renderRecent() {
+    const section = document.getElementById("recentSection");
+    const container = document.getElementById("recentContainer");
+    const recent = getRecent();
+    if (recent.length === 0 || (currentFilter !== "all" && currentFilter !== "recent")) {
+      section.style.display = "none";
+      return;
+    }
+    if (currentFilter === "recent" || currentFilter === "all") {
+      section.style.display = "block";
+    }
+    container.innerHTML = recent.map(sheet => {
+      const cat = detectCategory(sheet.name);
+      const color = cat ? cat.color : "var(--accent)";
+      return `
+        <div class="pinned-card" onclick="window.open('${escapeAttr(sheet.link)}','_blank')" style="border-top-color:${color};cursor:pointer;">
+          <div class="pinned-card-icon" style="color:${color}">${sheetsIcon(20)}</div>
+          <div class="pinned-card-name">${escapeHTML(sheet.name)}</div>
+          <div style="font-size:10px;color:var(--text-muted);">
+            ${timeAgo(sheet.time)}
+          </div>
+          <div class="pinned-card-footer">
+            <span class="pinned-open">Open ↗</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function timeAgo(timestamp) {
+    const diff = Date.now() - timestamp;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return mins + "m ago";
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + "h ago";
+    const days = Math.floor(hours / 24);
+    return days + "d ago";
+  }
+
+  // Override openSheet to track recent
+  const originalOpenSheet = openSheet;
+  openSheet = function(link) {
+    if (link) {
+      const sheet = allSheets.find(s => s.webLink === link);
+      if (sheet) addRecent(sheet.name, link);
+      window.open(link, "_blank");
+    }
+  };
+
+  // Override renderSheets to also render recent
+  const originalRender = renderSheets;
+  renderSheets = function(sheets) {
+    originalRender(sheets);
+    renderRecent();
+  };
+
+  // Override applyFilter to handle "recent"
+  const originalApply = applyFilter;
+  applyFilter = function() {
+    if (allSheets.length === 0) {
+      pendingFilter = currentFilter;
+      return;
+    }
+    if (currentFilter === "recent") {
+      const recent = getRecent();
+      const recentNames = recent.map(s => s.name);
+      const sheets = allSheets.filter(s => recentNames.includes(s.name));
+      sheets.sort((a, b) => recentNames.indexOf(a.name) - recentNames.indexOf(b.name));
+      renderSheets(sheets);
+      return;
+    }
+    originalApply();
+  };
+
+  // Init (run immediately since this script is at end of body)
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const f = params.get('filter');
+    if (f) setFilter(f);
+    fetchSheets();
+  })();
+</script>
+
+</body>
+</html>

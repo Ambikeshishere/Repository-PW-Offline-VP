@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physics Wallah — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-body">
+
+  <div class="bg-doodles" id="bgDoodles"></div>
+  <div class="bg-grid"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/d/dd/Physics_wallah_logo.svg" alt="PW Logo" style="width:32px;height:32px;object-fit:contain;"></div>
+        <div>
+          <span class="brand-name" id="brandName">Physics Wallah</span>
+          <span class="brand-tag" id="brandTag">Sheet Repository</span>
+        </div>
+      </div>
+
+      <h1 class="auth-title">Welcome back</h1>
+      <p class="auth-sub">Sign in with PW mail id</p>
+
+      <div class="input-group">
+        <label>Email</label>
+        <div class="input-wrap">
+          <span class="input-icon">✉</span>
+          <input type="email" id="email" placeholder="you@pw.live" autocomplete="email">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+      </div>
+
+      <button class="btn-signin" onclick="signIn()">
+        <span>Sign In</span>
+        <span class="btn-arrow">→</span>
+      </button>
+
+      <p id="authMessage" class="auth-msg"></p>
+
+      <p style="text-align:center; font-size:13px; color:var(--text-muted); margin-top:-4px;">
+        <a href="forgot.html" style="color:var(--accent2); text-decoration:none; font-weight:500;">Forgot Password?</a>
+      </p>
+
+      <p style="text-align:center; font-size:13px; color:var(--text-muted); margin-top:12px;">
+        New user? <a href="signup.html" style="color:var(--accent2); text-decoration:none; font-weight:500;">Create Account</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const t = localStorage.getItem('companyTheme') || 'charcoal';
+    document.documentElement.setAttribute('data-theme', t);
+  </script>
+  <script src="auth.js"></script>
+  
+</body>
+</html>
