@@ -288,9 +288,11 @@ function detectCategory(name) {
 
 // ===== PINNING — Cross-device sync via Google Sheet =====
 
-/** Load current user's pinned sheets from server (fallback → localStorage) */
+/** Load current user's pinned sheets from server + merge with localStorage */
 async function loadPinned() {
   if (!currentUser) { pinnedCache = []; return; }
+
+  let serverPins = null;
 
   // Try server first
   if (PIN_API_URL && !PIN_API_URL.startsWith("PUT_YOUR")) {
@@ -299,21 +301,40 @@ async function loadPinned() {
       const res = await fetch(url);
       const data = await res.json();
       if (data && Array.isArray(data.pins)) {
-        pinnedCache = data.pins;
-        console.log("📌 Pins synced from server");
-        return;
+        serverPins = data.pins;
+        console.log("📌 Pins synced from server:", serverPins.length);
       }
     } catch (err) {
-      console.warn("⚠️ Pin server unreachable, using localStorage fallback");
+      console.warn("⚠️ Pin server unreachable, will use localStorage");
     }
   }
 
-  // Fallback: read from localStorage
+  // Always also check localStorage (in case last POST failed)
+  let localPins = [];
   try {
     const local = JSON.parse(localStorage.getItem("pinnedSheets")) || {};
-    pinnedCache = local[currentUser] || [];
-  } catch {
-    pinnedCache = [];
+    localPins = local[currentUser] || [];
+  } catch {}
+
+  // Merge: start with server pins, append any extra local-only pins
+  if (serverPins) {
+    pinnedCache = [...serverPins];
+    for (const pin of localPins) {
+      if (!pinnedCache.includes(pin)) {
+        pinnedCache.push(pin);
+      }
+    }
+    // If we found extra local pins, push them up to server
+    if (pinnedCache.length > serverPins.length) {
+      console.log("📌 Found un-synced local pins, pushing to server");
+      fetch(PIN_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentUser, pins: pinnedCache })
+      }).catch(() => {});
+    }
+  } else {
+    pinnedCache = localPins;
   }
 }
 
@@ -343,19 +364,21 @@ async function togglePin(name) {
   } catch {}
 
   // Try server sync via POST (matches doPost in your Apps Script)
+  let synced = false;
   if (PIN_API_URL && !PIN_API_URL.startsWith("PUT_YOUR")) {
     try {
-      fetch(PIN_API_URL, {
+      const res = await fetch(PIN_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: currentUser, pins: pinnedCache })
-      }).catch(() => {});
+      });
+      if (res.ok) synced = true;
     } catch (err) {
-      console.warn("⚠️ Pin server sync failed");
+      console.warn("⚠️ Pin server sync failed — saved locally only");
     }
   }
 
-  showToast(msg);
+  showToast(msg + (synced ? " ☁️" : " 💾"));
   renderSheets(allSheets);
 }
 
