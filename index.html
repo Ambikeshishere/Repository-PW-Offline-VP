@@ -140,6 +140,8 @@
             <div class="theme-dot td-dark" data-theme="charcoal" onclick="setTheme('charcoal');event.stopPropagation();" title="Charcoal">🌑</div>
           </div>
           <div class="dropdown-divider"></div>
+          <button class="dropdown-about-btn" onclick="showAbout();event.stopPropagation();">ℹ️ About</button>
+          <div class="dropdown-divider"></div>
           <button class="dropdown-logout-btn" onclick="logout();event.stopPropagation();">↩ Logout</button>
         </div>
       </div>
@@ -309,6 +311,34 @@
     fetchSheets();
   })();
 </script>
+
+<!-- About Modal -->
+<div class="modal-overlay" id="aboutModal" onclick="hideAbout(event)">
+  <div class="about-modal" onclick="event.stopPropagation()">
+    <button class="about-close" onclick="hideAbout()">✕</button>
+    <div class="about-header">
+      <span class="about-icon">📋</span>
+      <span class="about-title">About Sheet Repository</span>
+    </div>
+    <div class="about-body">
+      <p>This repository contains all PW sheets shared across company teams:</p>
+      <div class="about-categories">
+        <span>📈 Sales</span>
+        <span>📣 Marketing</span>
+        <span>📚 Acads</span>
+        <span>📢 Advertisement</span>
+        <span>🏫 Offline Gen</span>
+        <span>⚙️ Operations</span>
+        <span>👥 HR</span>
+        <span>🎬 Videos</span>
+      </div>
+      <p>All sheets are sourced from Google Drive and auto-synced daily.</p>
+    </div>
+    <div class="about-footer">
+      Designed & Developed by <strong>Ambikesh Srivastava</strong>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

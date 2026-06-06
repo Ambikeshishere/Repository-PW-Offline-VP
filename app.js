@@ -432,6 +432,17 @@ document.addEventListener("click", function(e) {
   }
 });
 
+// ===== ABOUT MODAL =====
+function showAbout() {
+  document.getElementById("aboutModal").classList.add("open");
+  // Close user dropdown
+  const dd = document.getElementById("userDropdown");
+  if (dd) dd.classList.remove("open");
+}
+function hideAbout(e) {
+  document.getElementById("aboutModal").classList.remove("open");
+}
+
 // Set user email in sidebar
 (function() {
   const user = localStorage.getItem("loggedUser");
