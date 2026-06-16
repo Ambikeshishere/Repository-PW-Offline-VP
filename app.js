@@ -123,7 +123,8 @@ async function fetchSheetsFromAPI() {
         owner: cols[2]?.trim() || "",
         lastModified: cols[3]?.trim() || "",
         lastModifiedDate: cols[4]?.trim() || "",
-        webLink: cols[5]?.trim() || cols[1]?.trim() || ""
+        webLink: cols[5]?.trim() || cols[1]?.trim() || "",
+        label: cols[7]?.trim() || ""
       };
     }).filter(s => s.name && s.webLink);
 
@@ -193,7 +194,7 @@ function renderPinned(sheets) {
   empty.style.display = "none";
 
   sheets.forEach((sheet) => {
-    const cat = detectCategory(sheet.name);
+    const cat = getCategory(sheet.label);
     const borderColor = cat ? cat.color : "var(--accent)";
     const catBadge = cat ? `<span class="cat-badge" style="background:${cat.color}22; color:${cat.color}; border-color:${cat.color}44">${cat.icon} ${cat.label}</span>` : "";
 
@@ -236,7 +237,7 @@ function renderList(sheets) {
   empty.style.display = "none";
 
   sheets.forEach((sheet) => {
-    const cat = detectCategory(sheet.name);
+    const cat = getCategory(sheet.label);
     const catBadge = cat ? `<span class="cat-badge" style="background:${cat.color}22; color:${cat.color}; border-color:${cat.color}44">${cat.icon} ${cat.label}</span>` : "";
     const borderColor = cat ? cat.color : "rgba(255,255,255,0.08)";
     const iconBg = cat ? `${cat.color}22` : "rgba(255,255,255,0.06)";
@@ -264,27 +265,30 @@ function renderList(sheets) {
   });
 }
 
-// ===== CATEGORY DETECTION =====
-function detectCategory(name) {
-  const n = name.toLowerCase();
-  if (n.includes("sales") || n.includes("pipeline"))
-                                return { label: "Sales",         icon: "📈", color: "#8b5cf6" };
-  if (n.includes("marketing") || n.includes("campaign"))
-                                return { label: "Marketing",     icon: "📣", color: "#fb923c" };
-  if (n.includes("acads") || n.includes("academic"))
-                                return { label: "Acads",         icon: "📚", color: "#14b8a6" };
-  if (n.includes("advertise") || n.includes("advertisement"))
-                                return { label: "Advertisement", icon: "📢", color: "#f97316" };
-  if (n.includes("offline"))
-                                return { label: "Offline Gen",   icon: "🏫", color: "#6366f1" };
-  if (n.includes("ops") || n.includes("operation"))
-                                return { label: "Operations",    icon: "⚙️", color: "#0ea5e9" };
-  if (n.includes("hr") || n.includes("employee"))
-                                return { label: "HR",            icon: "👥", color: "#eab308" };
-  if (n.includes("video") || n.includes("lecture") || n.includes("tutorial"))
-                                return { label: "Video",         icon: "🎬", color: "#ec4899" };
-  return null;
+// ===== CATEGORY MAPPING (from sheet Label column in CSV) =====
+const CATEGORY_MAP = {
+  "Sales & Counselling": { icon: "📈", color: "#8b5cf6", filter: "sales" },
+  "Marketing":           { icon: "📣", color: "#fb923c", filter: "marketing" },
+  "Acads":               { icon: "📚", color: "#14b8a6", filter: "acads" },
+  "Batch Ops":           { icon: "📦", color: "#f472b6", filter: "batch" },
+  "Compliance":          { icon: "✅", color: "#34d399", filter: "compliance" }
+};
+
+/** Look up category info by label value from CSV */
+function getCategory(label) {
+  if (!label) return null;
+  const info = CATEGORY_MAP[label.trim()];
+  return info ? { label: label.trim(), icon: info.icon, color: info.color } : null;
 }
+
+/** Map filter key → expected label value */
+const FILTER_TO_LABEL = {
+  sales: "Sales & Counselling",
+  marketing: "Marketing",
+  acads: "Acads",
+  batch: "Batch Ops",
+  compliance: "Compliance"
+};
 
 // ===== PINNING — Cross-device sync via Google Sheet =====
 
@@ -402,7 +406,10 @@ function attachFilterHandlers() {
       let sheets = [...allSheets];
 
       if (currentFilter !== "all" && currentFilter !== "pinned") {
-        sheets = sheets.filter(s => s.name.toLowerCase().includes(currentFilter.toLowerCase()));
+        const targetLabel = FILTER_TO_LABEL[currentFilter];
+        if (targetLabel) {
+          sheets = sheets.filter(s => s.label === targetLabel);
+        }
       } else if (currentFilter === "pinned") {
         const pinned = getPinned();
         sheets = sheets.filter(s => pinned.includes(s.name));
@@ -446,10 +453,8 @@ function setFilter(filter) {
 
   const titles = {
     all: "Sheet Repository", pinned: "Pinned Sheets",
-    sales: "Sales", marketing: "Marketing",
-    acads: "Acads", advertisement: "Advertisement",
-    offline: "Offline Gen", ops: "Operations", hr: "HR",
-    video: "Videos"
+    sales: "Sales & Counselling", marketing: "Marketing",
+    acads: "Acads", batch: "Batch Ops", compliance: "Compliance"
   };
   const titleEl = document.querySelector(".page-title");
   if (titleEl) titleEl.innerText = titles[filter] || "Sheet Repository";
@@ -472,8 +477,13 @@ function applyFilter() {
     renderSheets(sheets.filter(s => pinned.includes(s.name)));
     return;
   }
-  const keyword = currentFilter.toLowerCase();
-  renderSheets(sheets.filter(s => s.name.toLowerCase().includes(keyword)));
+  // Filter by label column from CSV
+  const targetLabel = FILTER_TO_LABEL[currentFilter];
+  if (targetLabel) {
+    renderSheets(sheets.filter(s => s.label === targetLabel));
+  } else {
+    renderSheets(sheets);
+  }
 }
 
 // ===== SKELETON LOADING =====

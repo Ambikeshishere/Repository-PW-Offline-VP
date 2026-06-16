@@ -100,14 +100,11 @@
         <span class="nav-item-icon">📁</span>
         Categories <span class="dd-arrow">▾</span>
         <div class="nav-dropdown" id="catDropdownMenu">
-          <div class="dd-item menu-item" data-filter="sales">📈 Sales</div>
+          <div class="dd-item menu-item" data-filter="sales">📈 Sales & Counselling</div>
           <div class="dd-item menu-item" data-filter="marketing">📣 Marketing</div>
           <div class="dd-item menu-item" data-filter="acads">📚 Acads</div>
-          <div class="dd-item menu-item" data-filter="advertisement">📢 Advertisement</div>
-          <div class="dd-item menu-item" data-filter="offline">🏫 Offline Gen</div>
-          <div class="dd-item menu-item" data-filter="ops">⚙️ Operations</div>
-          <div class="dd-item menu-item" data-filter="hr">👥 HR</div>
-          <div class="dd-item menu-item" data-filter="video">🎬 Videos</div>
+          <div class="dd-item menu-item" data-filter="batch">📦 Batch Ops</div>
+          <div class="dd-item menu-item" data-filter="compliance">✅ Compliance</div>
         </div>
       </div>
     </div>
@@ -260,7 +257,9 @@
       section.style.display = "block";
     }
     container.innerHTML = recent.map(sheet => {
-      const cat = detectCategory(sheet.name);
+      // Look up label from allSheets
+      const fullSheet = allSheets.find(s => s.name === sheet.name);
+      const cat = fullSheet ? getCategory(fullSheet.label) : null;
       const color = cat ? cat.color : "var(--accent)";
       return `
         <div class="pinned-card" onclick="window.open('${escapeAttr(sheet.link)}','_blank')" style="border-top-color:${color};cursor:pointer;">
@@ -343,14 +342,11 @@
     <div class="about-body">
       <p>This repository contains all PW sheets shared across company teams:</p>
       <div class="about-categories">
-        <span>📈 Sales</span>
+        <span>📈 Sales & Counselling</span>
         <span>📣 Marketing</span>
         <span>📚 Acads</span>
-        <span>📢 Advertisement</span>
-        <span>🏫 Offline Gen</span>
-        <span>⚙️ Operations</span>
-        <span>👥 HR</span>
-        <span>🎬 Videos</span>
+        <span>📦 Batch Ops</span>
+        <span>✅ Compliance</span>
       </div>
       <p>All sheets are sourced from Google Drive and auto-synced daily.</p>
     </div>
